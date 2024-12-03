@@ -116,8 +116,8 @@
         <input type="text" name="genre" placeholder="Genre" required>
         <button type="submit" name="submit_add">Add Book</button>
     </form>
-
-    <table class="table table-bordered">
+    <input type="text" id="search-books" class="search" onkeyup="searchTable('books')" placeholder="Search Books">
+    <table class="table table-bordered" id="books">
         <thead class="table-primary">
             <tr>
                 <th>ID Book</th>
@@ -281,7 +281,7 @@
                     const cells = rows[i].getElementsByTagName('td');
                     let found = false;
 
-                    for (let j = 0; j < cells.length - 1; j++) {
+                    for (let j = 0; j < cells.length; j++) { // Include all columns in the search
                         if (cells[j].textContent.toLowerCase().includes(input)) {
                             found = true;
                             break;
@@ -291,6 +291,7 @@
                     rows[i].style.display = found ? '' : 'none';
                 }
             }
+
         </script>
 
     </body>

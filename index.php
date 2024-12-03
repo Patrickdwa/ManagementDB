@@ -542,7 +542,9 @@
         <tr>
             <th>Loan ID</th>
             <th>Book ID</th>
+            <th>Title</th>
             <th>Member ID</th>
+            <th>Name</th>
             <th>Loan Date</th>
             <th>Return Date</th>
             <th>Action</th>
@@ -552,7 +554,10 @@
         <?php
         $loans = [];
         try {
-            $stmt = $pdo->query("SELECT * FROM loans ORDER BY loan_id");
+            $stmt = $pdo->query("SELECT loans.loan_id, loans.book_id, books.title, loans.member_id, members.name, loans.loan_date, loans.return_date FROM loans 
+                                JOIN books on loans.book_id = books.book_id
+                                JOIN members on loans.member_id = members.member_id
+                                ORDER BY loan_id;");
             $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
             echo "Error fetching loans: " . $e->getMessage();
@@ -564,7 +569,9 @@
                 <tr>
                     <td><?= htmlspecialchars($loan['loan_id']) ?></td>
                     <td><?= htmlspecialchars($loan['book_id']) ?></td>
+                    <td><?= htmlspecialchars($loan['title']) ?></td>
                     <td><?= htmlspecialchars($loan['member_id']) ?></td>
+                    <td><?= htmlspecialchars($loan['name']) ?></td>
                     <td><?= htmlspecialchars($loan['loan_date']) ?></td>
                     <td><?= htmlspecialchars($loan['return_date']) ?></td>
                     <td>
@@ -627,9 +634,9 @@
             const cells = row.querySelectorAll('td');
             document.getElementById('edit-loan-id').value = cells[0].textContent.trim();
             document.getElementById('edit-loan-book-id').value = cells[1].textContent.trim();
-            document.getElementById('edit-loan-member-id').value = cells[2].textContent.trim();
-            document.getElementById('edit-loan-date').value = cells[3].textContent.trim();
-            document.getElementById('edit-return-date').value = cells[4].textContent.trim();
+            document.getElementById('edit-loan-member-id').value = cells[3].textContent.trim();
+            document.getElementById('edit-loan-date').value = cells[5].textContent.trim();
+            document.getElementById('edit-return-date').value = cells[6].textContent.trim();
             document.getElementById('edit-loan-form').style.display = 'block';
         }
         function searchTable(tableId) {

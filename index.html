@@ -1,1 +1,196 @@
-<button>tes1</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management CRUD Tables with Forms</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        input[type="text"], input[type="number"], input[type="date"], button {
+            padding: 8px;
+            font-size: 14px;
+        }
+        .search {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Books Form -->
+    <h2>Books Table</h2>
+    <form id="books-form">
+        <input type="text" id="book-title" placeholder="Title" required>
+        <input type="text" id="book-author" placeholder="Author" required>
+        <input type="text" id="book-publisher" placeholder="Publisher" required>
+        <input type="number" id="book-year" placeholder="Year" required>
+        <input type="text" id="book-genre" placeholder="Genre" required>
+        <button type="button" onclick="addRow('books')">Add Book</button>
+    </form>
+    <input type="text" id="search-books" class="search" onkeyup="searchTable('books')" placeholder="Search Books">
+    <table id="books">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Publisher</th>
+                <th>Year</th>
+                <th>Genre</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- Members Form -->
+    <h2>Members Table</h2>
+    <form id="members-form">
+        <input type="text" id="member-name" placeholder="Name" required>
+        <input type="text" id="member-email" placeholder="Email" required>
+        <input type="text" id="member-phone" placeholder="Phone" required>
+        <input type="text" id="member-address" placeholder="Address" required>
+        <button type="button" onclick="addRow('members')">Add Member</button>
+    </form>
+    <input type="text" id="search-members" class="search" onkeyup="searchTable('members')" placeholder="Search Members">
+    <table id="members">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- Loans Form -->
+    <h2>Loans Table</h2>
+    <form id="loans-form">
+        <input type="number" id="loan-book-id" placeholder="Book ID" required>
+        <input type="number" id="loan-member-id" placeholder="Member ID" required>
+        <input type="date" id="loan-date" required>
+        <input type="date" id="return-date">
+        <button type="button" onclick="addRow('loans')">Add Loan</button>
+    </form>
+    <input type="text" id="search-loans" class="search" onkeyup="searchTable('loans')" placeholder="Search Loans">
+    <table id="loans">
+        <thead>
+            <tr>
+                <th>Book ID</th>
+                <th>Member ID</th>
+                <th>Loan Date</th>
+                <th>Return Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        function addRow(tableId) {
+            let values = [];
+            if (tableId === 'books') {
+                values = [
+                    document.getElementById('book-title').value,
+                    document.getElementById('book-author').value,
+                    document.getElementById('book-publisher').value,
+                    document.getElementById('book-year').value,
+                    document.getElementById('book-genre').value
+                ];
+            } else if (tableId === 'members') {
+                values = [
+                    document.getElementById('member-name').value,
+                    document.getElementById('member-email').value,
+                    document.getElementById('member-phone').value,
+                    document.getElementById('member-address').value
+                ];
+            } else if (tableId === 'loans') {
+                values = [
+                    document.getElementById('loan-book-id').value,
+                    document.getElementById('loan-member-id').value,
+                    document.getElementById('loan-date').value,
+                    document.getElementById('return-date').value
+                ];
+            }
+
+            const table = document.getElementById(tableId).querySelector('tbody');
+            const row = table.insertRow();
+            values.forEach(value => {
+                const cell = row.insertCell();
+                cell.textContent = value || '-';
+            });
+
+            const actionCell = row.insertCell();
+            actionCell.innerHTML = `
+                <button onclick="deleteRow(this)">Delete</button>
+                <button onclick="editRow(this)">Edit</button>
+            `;
+
+            document.getElementById(`${tableId}-form`).reset(); // Reset form inputs
+        }
+
+        function deleteRow(button) {
+            const row = button.parentNode.parentNode;
+            row.parentNode.removeChild(row);
+        }
+
+        function editRow(button) {
+            const row = button.parentNode.parentNode;
+            const cells = row.querySelectorAll('td');
+
+            for (let i = 0; i < cells.length - 1; i++) {
+                const newValue = prompt(`Edit value (${cells[i].textContent}):`, cells[i].textContent);
+                if (newValue !== null) {
+                    cells[i].textContent = newValue.trim();
+                }
+            }
+        }
+
+        function searchTable(tableId) {
+            const input = document.getElementById(`search-${tableId}`).value.toLowerCase();
+            const rows = document.getElementById(tableId).querySelector('tbody').getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let found = false;
+
+                for (let j = 0; j < cells.length - 1; j++) {
+                    if (cells[j].textContent.toLowerCase().includes(input)) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                rows[i].style.display = found ? '' : 'none';
+            }
+        }
+    </script>
+
+</body>
+</html>

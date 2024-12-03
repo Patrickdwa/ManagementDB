@@ -63,7 +63,34 @@
         header("Location: " . $_SERVER['PHP_SELF']);
         exit();
     }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        if (isset($_POST['submit_edit'])) {
+            $id = htmlspecialchars($_POST['book_id']);
+            $title = htmlspecialchars($_POST['title']);
+            $author = htmlspecialchars($_POST['author']);
+            $publisher = htmlspecialchars($_POST['publisher']);
+            $year_published = htmlspecialchars($_POST['year_published']);
+            $genre = htmlspecialchars($_POST['genre']);
     
+            try {
+                $stmt = $pdo->prepare("UPDATE books SET title = :title, author = :author, publisher = :publisher, year_published = :year_published, genre = :genre WHERE book_id = :id");
+                $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+                $stmt->bindParam(':title', $title);
+                $stmt->bindParam(':author', $author);
+                $stmt->bindParam(':publisher', $publisher);
+                $stmt->bindParam(':year_published', $year_published, PDO::PARAM_INT);
+                $stmt->bindParam(':genre', $genre);
+                $stmt->execute();
+                $_SESSION['success'] = "Book updated successfully!";
+            } catch (PDOException $e) {
+                $_SESSION['error'] = "Error updating book: " . $e->getMessage();
+            }
+    
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit();
+        }
+    }
     ?>
 
     <!DOCTYPE html>
@@ -155,6 +182,11 @@
                                 <input type="hidden" name="book_id" value="<?php echo htmlspecialchars($book['book_id']); ?>">
                                 <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                             </form>
+                            <form method="POST" style="display:inline;">
+                            <input type="hidden" name="book_id" value="<?php echo htmlspecialchars($book['book_id']); ?>">
+                            <button type="button" class="btn btn-warning btn-sm" onclick="showEditForm(this)">Edit</button>
+                        </form>
+
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -165,6 +197,18 @@
             <?php endif; ?>
         </tbody>
     </table>
+    <div id="edit-form">
+    <h3>Edit Book</h3>
+    <form method="POST">
+        <input type="hidden" name="book_id" id="edit-book-id">
+        <input type="text" name="title" id="edit-title" placeholder="Title" required>
+        <input type="text" name="author" id="edit-author" placeholder="Author" required>
+        <input type="text" name="publisher" id="edit-publisher" placeholder="Publisher" required>
+        <input type="number" name="year_published" id="edit-year" placeholder="Year Published" required>
+        <input type="text" name="genre" id="edit-genre" placeholder="Genre" required>
+        <button type="submit" name="submit_edit" class="btn btn-primary">Save Changes</button>
+    </form>
+</div>
 
 
         <!-- Members Form -->
@@ -214,83 +258,19 @@
         </table>
 
         <script>
-            function addRow(tableId) {
-                let values = [];
-                if (tableId === 'books') {
-                    values = [
-                        document.getElementById('book-title').value,
-                        document.getElementById('book-author').value,
-                        document.getElementById('book-publisher').value,
-                        document.getElementById('book-year').value,
-                        document.getElementById('book-genre').value
-                    ];
-                } else if (tableId === 'members') {
-                    values = [
-                        document.getElementById('member-name').value,
-                        document.getElementById('member-email').value,
-                        document.getElementById('member-phone').value,
-                        document.getElementById('member-address').value
-                    ];
-                } else if (tableId === 'loans') {
-                    values = [
-                        document.getElementById('loan-book-id').value,
-                        document.getElementById('loan-member-id').value,
-                        document.getElementById('loan-date').value,
-                        document.getElementById('return-date').value
-                    ];
-                }
+        function showEditForm(button) {
+            const row = button.closest('tr');
+            const cells = row.querySelectorAll('td');
 
-                const table = document.getElementById(tableId).querySelector('tbody');
-                const row = table.insertRow();
-                values.forEach(value => {
-                    const cell = row.insertCell();
-                    cell.textContent = value || '-';
-                });
+            document.getElementById('edit-book-id').value = cells[0].textContent.trim();
+            document.getElementById('edit-title').value = cells[1].textContent.trim();
+            document.getElementById('edit-author').value = cells[2].textContent.trim();
+            document.getElementById('edit-publisher').value = cells[3].textContent.trim();
+            document.getElementById('edit-year').value = cells[4].textContent.trim();
+            document.getElementById('edit-genre').value = cells[5].textContent.trim();
 
-                const actionCell = row.insertCell();
-                actionCell.innerHTML = `
-                    <button onclick="deleteRow(this)">Delete</button>
-                    <button onclick="editRow(this)">Edit</button>
-                `;
-
-                document.getElementById(`${tableId}-form`).reset(); // Reset form inputs
-            }
-
-            function deleteRow(button) {
-                const row = button.parentNode.parentNode;
-                row.parentNode.removeChild(row);
-            }
-
-            function editRow(button) {
-                const row = button.parentNode.parentNode;
-                const cells = row.querySelectorAll('td');
-
-                for (let i = 0; i < cells.length - 1; i++) {
-                    const newValue = prompt(`Edit value (${cells[i].textContent}):`, cells[i].textContent);
-                    if (newValue !== null) {
-                        cells[i].textContent = newValue.trim();
-                    }
-                }
-            }
-
-            function searchTable(tableId) {
-                const input = document.getElementById(`search-${tableId}`).value.toLowerCase();
-                const rows = document.getElementById(tableId).querySelector('tbody').getElementsByTagName('tr');
-
-                for (let i = 0; i < rows.length; i++) {
-                    const cells = rows[i].getElementsByTagName('td');
-                    let found = false;
-
-                    for (let j = 0; j < cells.length - 1; j++) {
-                        if (cells[j].textContent.toLowerCase().includes(input)) {
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    rows[i].style.display = found ? '' : 'none';
-                }
-            }
+            document.getElementById('edit-form').style.display = 'block';
+        }
         </script>
 
     </body>

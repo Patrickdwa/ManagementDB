@@ -173,6 +173,84 @@
             exit();
         }
     }
+
+    // loan
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Handle Add Loan
+        if (isset($_POST['submit_add_loan'])) {
+            $book_id = htmlspecialchars($_POST['book_id']);
+            $member_id = htmlspecialchars($_POST['member_id']);
+            $loan_date = htmlspecialchars($_POST['loan_date']);
+            $return_date = htmlspecialchars($_POST['return_date']);
+    
+            if (!$book_id || !$member_id || !$loan_date || !$return_date) {
+                $_SESSION['error'] = "Invalid input. Please fill out all member fields correctly.";
+                header("Location: " . $_SERVER['PHP_SELF']);
+                exit();
+            }
+    
+            try {
+                $stmt = $pdo->prepare("INSERT INTO loans (book_id, member_id, loan_date, return_date) VALUES (:book_id, :member_id, :loan_date, :return_date)");
+                $stmt->bindParam(':book_id', $book_id);
+                $stmt->bindParam(':member_id', $member_id);
+                $stmt->bindParam(':loan_date', $loan_date);
+                $stmt->bindParam(':return_date', $return_date);
+    
+                if ($stmt->execute()) {
+                    $_SESSION['success'] = "Member added successfully!";
+                } else {
+                    $_SESSION['error'] = "Failed to insert member into the database.";
+                }
+            } catch (PDOException $e) {
+                $_SESSION['error'] = "Database error: " . $e->getMessage();
+            }
+    
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit();
+        }
+    
+        // Handle Delete Member
+        if (isset($_POST['submit_delete_member'])) {
+            $id = htmlspecialchars($_POST['member_id']);
+    
+            try {
+                $stmt = $pdo->prepare("DELETE FROM members WHERE member_id = :id");
+                $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+                $stmt->execute();
+                $_SESSION['success'] = "Member deleted successfully!";
+            } catch (PDOException $e) {
+                $_SESSION['error'] = "Error deleting member: " . $e->getMessage();
+            }
+    
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit();
+        }
+    
+        // Handle Edit Member
+        if (isset($_POST['submit_edit_member'])) {
+            $id = htmlspecialchars($_POST['member_id']);
+            $name = htmlspecialchars($_POST['name']);
+            $email = htmlspecialchars($_POST['email']);
+            $phone = htmlspecialchars($_POST['phone']);
+            $address = htmlspecialchars($_POST['address']);
+    
+            try {
+                $stmt = $pdo->prepare("UPDATE members SET name = :name, email = :email, phone = :phone, address = :address WHERE member_id = :id");
+                $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+                $stmt->bindParam(':name', $name);
+                $stmt->bindParam(':email', $email);
+                $stmt->bindParam(':phone', $phone);
+                $stmt->bindParam(':address', $address);
+                $stmt->execute();
+                $_SESSION['success'] = "Member updated successfully!";
+            } catch (PDOException $e) {
+                $_SESSION['error'] = "Error updating member: " . $e->getMessage();
+            }
+    
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit();
+        }
+    }
     ?>
 
     <!DOCTYPE html>
@@ -279,7 +357,7 @@
             <?php endif; ?>
         </tbody>
     </table>
-    <div id="edit-form">
+    <div id="edit-form" style="display:none;">
     <h3>Edit Book</h3>
     <form method="POST">
         <input type="hidden" name="book_id" id="edit-book-id">
@@ -295,13 +373,13 @@
 
         <!-- Members Form -->
         <h2>Add New Member</h2>
-<form method="POST">
-    <input type="text" name="name" placeholder="Name" required>
-    <input type="email" name="email" placeholder="Email" required>
-    <input type="text" name="phone" placeholder="Phone" required>
-    <input type="text" name="address" placeholder="Address" required>
-    <button type="submit" name="submit_add_member">Add Member</button>
-</form>
+        <form method="POST">
+            <input type="text" name="name" placeholder="Name" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="text" name="phone" placeholder="Phone" required>
+            <input type="text" name="address" placeholder="Address" required>
+            <button type="submit" name="submit_add_member">Add Member</button>
+        </form>
 
 <input type="text" id="search-members" class="search" onkeyup="searchTable('members')" placeholder="Search Members">
 
@@ -367,16 +445,17 @@
         <!-- Loans Form -->
         <h2>Loans Table</h2>
         <form id="loans-form">
-            <input type="number" id="loan-book-id" placeholder="Book ID" required>
-            <input type="number" id="loan-member-id" placeholder="Member ID" required>
-            <input type="date" id="loan-date" required>
-            <input type="date" id="return-date">
-            <button type="button" onclick="addRow('loans')">Add Loan</button>
+            <input name="book_id" type="number" id="loan-book-id" placeholder="Book ID" required>
+            <input name="member_id" type="number" id="loan-member-id" placeholder="Member ID" required>
+            <input name="loan_date" type="date" id="loan-date" required>
+            <input name="return_date" type="date" id="return-date">
+            <button name="submit_add_loan" type="submit">Add Loan</button>
         </form>
         <input type="text" id="search-loans" class="search" onkeyup="searchTable('loans')" placeholder="Search Loans">
         <table id="loans">
             <thead>
                 <tr>
+                    <th>Loan ID</th>
                     <th>Book ID</th>
                     <th>Member ID</th>
                     <th>Loan Date</th>
@@ -384,10 +463,61 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            <?php 
+            $loans = [];
+            try {
+                $stmt = $pdo->query("SELECT * FROM loans ORDER BY loan_id");
+                $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {
+                $message = "Error fetching data: " . $e->getMessage();
+            }
+            ?>
+            
+            <?php if (!empty($loans)) : ?>
+                <?php foreach ($loans as $loan): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($loan['loan_id']); ?></td>
+                        <td><?php echo htmlspecialchars($loan['book_id']); ?></td>
+                        <td><?php echo htmlspecialchars($loan['member_id']); ?></td>
+                        <td><?php echo htmlspecialchars($loan['loan_date']); ?></td>
+                        <td><?php echo htmlspecialchars($loan['return_date']); ?></td>
+
+                        <td>
+                            <form method="POST" onsubmit="return confirm('Are you sure you want to delete this loan?');" style="display:inline;">
+                                <input type="hidden" name="submit_delete" value="1">
+                                <input type="hidden" name="loan_id" value="<?php echo htmlspecialchars($loan['loan_id']); ?>">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                            <form method="POST" style="display:inline;">
+                            <input type="hidden" name="loan_id" value="<?php echo htmlspecialchars($loan['loan_id']); ?>">
+                            <button type="button" class="btn btn-warning btn-sm" onclick="showEditFormLoan(this)">Edit</button>
+                        </form>
+
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <tr>
+                    <td colspan="7" class="text-center">No data available</td>
+                </tr>
+            <?php endif; ?>
+            </tbody>
         </table>
 
+        <div id="edit-form-loan" style="display:none;">
+            <h3>Edit Loan</h3>
+            <form method="POST">
+                <input type="number" id="loan-book-id" placeholder="Book ID" required>
+                <input type="number" id="loan-member-id" placeholder="Member ID" required>
+                <input type="date" id="loan-date" required>
+                <input type="date" id="return-date">
+                <button type="submit" name="submit_edit_loan">Save Changes</button>
+            </form>
+        </div>
+
         <script>
+
         function showEditForm(button) {
             const row = button.closest('tr');
             const cells = row.querySelectorAll('td');
@@ -413,6 +543,18 @@
             document.getElementById('edit-address').value = cells[4].textContent.trim();
 
             document.getElementById('edit-form-member').style.display = 'block';
+        }
+
+        function showEditFormLoan(button) {
+            const row = button.closest('tr');
+            const cells = row.querySelectorAll('td');
+
+            document.getElementById('loan-book-id').value = cells[0].textContent.trim();
+            document.getElementById('loan-member-id').value = cells[1].textContent.trim();
+            document.getElementById('loan-date').value = cells[2].textContent.trim();
+            document.getElementById('return-date').value = cells[3].textContent.trim();
+
+            document.getElementById('edit-form-loan').style.display = 'block';
         }
         function searchTable(tableId) {
                 const input = document.getElementById(`search-${tableId}`).value.toLowerCase();

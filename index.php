@@ -91,6 +91,88 @@
             exit();
         }
     }
+
+
+
+    // MEMBERS //
+    
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Handle Add Member
+        if (isset($_POST['submit_add_member'])) {
+            $name = htmlspecialchars($_POST['name']);
+            $email = htmlspecialchars($_POST['email']);
+            $phone = htmlspecialchars($_POST['phone']);
+            $address = htmlspecialchars($_POST['address']);
+    
+            if (!$name || !$email || !$phone || !$address) {
+                $_SESSION['error'] = "Invalid input. Please fill out all member fields correctly.";
+                header("Location: " . $_SERVER['PHP_SELF']);
+                exit();
+            }
+    
+            try {
+                $stmt = $pdo->prepare("INSERT INTO members (name, email, phone, address) VALUES (:name, :email, :phone, :address)");
+                $stmt->bindParam(':name', $name);
+                $stmt->bindParam(':email', $email);
+                $stmt->bindParam(':phone', $phone);
+                $stmt->bindParam(':address', $address);
+    
+                if ($stmt->execute()) {
+                    $_SESSION['success'] = "Member added successfully!";
+                } else {
+                    $_SESSION['error'] = "Failed to insert member into the database.";
+                }
+            } catch (PDOException $e) {
+                $_SESSION['error'] = "Database error: " . $e->getMessage();
+            }
+    
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit();
+        }
+    
+        // Handle Delete Member
+        if (isset($_POST['submit_delete_member'])) {
+            $id = htmlspecialchars($_POST['member_id']);
+    
+            try {
+                $stmt = $pdo->prepare("DELETE FROM members WHERE member_id = :id");
+                $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+                $stmt->execute();
+                $_SESSION['success'] = "Member deleted successfully!";
+            } catch (PDOException $e) {
+                $_SESSION['error'] = "Error deleting member: " . $e->getMessage();
+            }
+    
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit();
+        }
+    
+        // Handle Edit Member
+        if (isset($_POST['submit_edit_member'])) {
+            $id = htmlspecialchars($_POST['member_id']);
+            $name = htmlspecialchars($_POST['name']);
+            $email = htmlspecialchars($_POST['email']);
+            $phone = htmlspecialchars($_POST['phone']);
+            $address = htmlspecialchars($_POST['address']);
+    
+            try {
+                $stmt = $pdo->prepare("UPDATE members SET name = :name, email = :email, phone = :phone, address = :address WHERE member_id = :id");
+                $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+                $stmt->bindParam(':name', $name);
+                $stmt->bindParam(':email', $email);
+                $stmt->bindParam(':phone', $phone);
+                $stmt->bindParam(':address', $address);
+                $stmt->execute();
+                $_SESSION['success'] = "Member updated successfully!";
+            } catch (PDOException $e) {
+                $_SESSION['error'] = "Error updating member: " . $e->getMessage();
+            }
+    
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit();
+        }
+    }
     ?>
 
     <!DOCTYPE html>
@@ -212,27 +294,75 @@
 
 
         <!-- Members Form -->
-        <h2>Members Table</h2>
-        <form id="members-form">
-            <input type="text" id="member-name" placeholder="Name" required>
-            <input type="text" id="member-email" placeholder="Email" required>
-            <input type="text" id="member-phone" placeholder="Phone" required>
-            <input type="text" id="member-address" placeholder="Address" required>
-            <button type="button" onclick="addRow('members')">Add Member</button>
-        </form>
-        <input type="text" id="search-members" class="search" onkeyup="searchTable('members')" placeholder="Search Members">
-        <table id="members">
-            <thead>
+        <h2>Add New Member</h2>
+<form method="POST">
+    <input type="text" name="name" placeholder="Name" required>
+    <input type="email" name="email" placeholder="Email" required>
+    <input type="text" name="phone" placeholder="Phone" required>
+    <input type="text" name="address" placeholder="Address" required>
+    <button type="submit" name="submit_add_member">Add Member</button>
+</form>
+
+<input type="text" id="search-members" class="search" onkeyup="searchTable('members')" placeholder="Search Members">
+
+<table id="members">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php 
+        $members = [];
+        try {
+            $stmt = $pdo->query("SELECT * FROM members ORDER BY member_id");
+            $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            echo "Error fetching members: " . $e->getMessage();
+        }
+        ?>
+
+        <?php if (!empty($members)) : ?>
+            <?php foreach ($members as $member): ?>
                 <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Address</th>
-                    <th>Actions</th>
+                    <td><?php echo htmlspecialchars($member['member_id']); ?></td>
+                    <td><?php echo htmlspecialchars($member['name']); ?></td>
+                    <td><?php echo htmlspecialchars($member['email']); ?></td>
+                    <td><?php echo htmlspecialchars($member['phone']); ?></td>
+                    <td><?php echo htmlspecialchars($member['address']); ?></td>
+                    <td>
+                        <form method="POST" style="display:inline;">
+                            <input type="hidden" name="submit_delete_member" value="1">
+                            <input type="hidden" name="member_id" value="<?php echo htmlspecialchars($member['member_id']); ?>">
+                            <button type="submit">Delete</button>
+                        </form>
+                        <button type="button" onclick="showEditFormMember(this)">Edit</button>
+                    </td>
                 </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <tr><td colspan="6">No members available.</td></tr>
+        <?php endif; ?>
+    </tbody>
+</table>
+
+<div id="edit-form-member" style="display:none;">
+    <h3>Edit Member</h3>
+    <form method="POST">
+        <input type="hidden" name="member_id" id="edit-member-id">
+        <input type="text" name="name" id="edit-name" placeholder="Name" required>
+        <input type="email" name="email" id="edit-email" placeholder="Email" required>
+        <input type="text" name="phone" id="edit-phone" placeholder="Phone" required>
+        <input type="text" name="address" id="edit-address" placeholder="Address" required>
+        <button type="submit" name="submit_edit_member">Save Changes</button>
+    </form>
+</div>
+
 
         <!-- Loans Form -->
         <h2>Loans Table</h2>
@@ -270,6 +400,19 @@
             document.getElementById('edit-genre').value = cells[5].textContent.trim();
 
             document.getElementById('edit-form').style.display = 'block';
+        }
+
+        function showEditFormMember(button) {
+            const row = button.closest('tr');
+            const cells = row.querySelectorAll('td');
+
+            document.getElementById('edit-member-id').value = cells[0].textContent.trim();
+            document.getElementById('edit-name').value = cells[1].textContent.trim();
+            document.getElementById('edit-email').value = cells[2].textContent.trim();
+            document.getElementById('edit-phone').value = cells[3].textContent.trim();
+            document.getElementById('edit-address').value = cells[4].textContent.trim();
+
+            document.getElementById('edit-form-member').style.display = 'block';
         }
         function searchTable(tableId) {
                 const input = document.getElementById(`search-${tableId}`).value.toLowerCase();

@@ -1,50 +1,47 @@
 <?php
+
 include 'conn.php';
 session_start();
 
-// Supabase API settings
-$supabase_url = "https://vrfihztmnfshxfjdcvzx.supabase.co";
-$supabase_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZyZmloenRtbmZzaHhmamRjdnp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMxNDg5NzEsImV4cCI6MjA0ODcyNDk3MX0.KMFfo5iqmNYZPajHq2yFZAhOI9kTyQKdFvYhsNjAiE8";
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_add'])) {
+    // Sanitize user inputs
+    $title = htmlspecialchars($_POST['title']);
+    $author = htmlspecialchars($_POST['author']);
+    $publisher = htmlspecialchars($_POST['publisher']);
+    $year_published = filter_var($_POST['year_published'], FILTER_VALIDATE_INT);
+    $genre = htmlspecialchars($_POST['genre']);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['submit_add'])) {
-        $title = htmlspecialchars($_POST['title']);
-        $author = htmlspecialchars($_POST['author']);
-        $publisher = htmlspecialchars($_POST['publisher']);
-        $year_published = htmlspecialchars($_POST['year_published']);
-        $genre = htmlspecialchars($_POST['genre']);
-
-        $data = [
-            'title' => $title,
-            'author' => $author,
-            'publisher' => $publisher,
-            'year_published' => $year_published,
-            'genre' => $genre
-        ];
-
-        $options = [
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-Type: application/json\r\nAuthorization: Bearer $supabase_key\r\n",
-                'content' => json_encode($data)
-            ]
-        ];
-
-        $context = stream_context_create($options);
-        $result = file_get_contents("$supabase_url/rest/v1/books", false, $context);
-
-        if ($result) {
-            $_SESSION['success'] = "New book added successfully!";
-        } else {
-            $_SESSION['error'] = "Error adding book.";
-        }
-
+    // Validate inputs
+    if (!$title || !$author || !$publisher || !$year_published || !$genre) {
+        $_SESSION['error'] = "Invalid input. Please fill out all fields correctly.";
         header("Location: " . $_SERVER['PHP_SELF']);
         exit();
     }
+
+    try {
+        // Insert data into the database
+        $stmt = $pdo->prepare("INSERT INTO books (title, author, publisher, year_published, genre) 
+                               VALUES (:title, :author, :publisher, :year_published, :genre)");
+        $stmt->bindParam(':title', $title);
+        $stmt->bindParam(':author', $author);
+        $stmt->bindParam(':publisher', $publisher);
+        $stmt->bindParam(':year_published', $year_published);
+        $stmt->bindParam(':genre', $genre);
+
+        if ($stmt->execute()) {
+            $_SESSION['success'] = "Book added successfully!";
+        } else {
+            $_SESSION['error'] = "Failed to insert book into the database.";
+        }
+    } catch (PDOException $e) {
+        $_SESSION['error'] = "Database error: " . $e->getMessage();
+    }
+
+    // Redirect back to the form
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit();
 }
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
